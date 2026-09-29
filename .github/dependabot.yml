@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MPL-2.0
+# Dependabot is scoped to what this repo actually consumes: action pins and the
+# base image digest. One open PR per ecosystem, because the estate's experience
+# is that a flood of unpinned bumps is how a broken toolchain pin lands
+# (hyperpolymath/standards#1037).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/London
+    open-pull-requests-limit: 1
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/London
+    open-pull-requests-limit: 1

@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+= Workflows in this repository
+
+[cols="1,2,3",options="header"]
+|===
+| Workflow | What it decides | How it can fail you
+
+| `ci.yml` | Tests pass, this repo passes its own language gate, the Containerfile meets the container floor, every workflow parses.
+| Julia 1.10 is a supported floor; a stdlib API change can break it while 1.11 is green. `fail-fast: false` keeps both visible.
+
+| `secret-scanner.yml` | No credentials in the tree.
+| Calls the estate reusable at a pinned commit. If that pin is moved to `@main` it stops being auditable; if `secrets: inherit` is dropped the scan degrades silently to a pass.
+|===
+
+Deliberately absent, with reasons in `../../docs/FINDINGS.adoc`:
+
+* *CodeQL* — three estate issues are open on default-setup vs committed
+  configurations colliding (`hyperpolymath/standards#1031`, `#1033`, `#1037`);
+  adding a second scanning lane here would reproduce that.
+* *Hypatia scan* — the reusable at the pin other repos use emits no SARIF
+  (`hyperpolymath/standards#1050`), so a green check here would mean nothing.
+* *The estate `language-gate` reusable* — `hyperpolymath/.github` publishes no
+  `language-gate.yml` (`§F8`), so the upstream caller template cannot be used
+  without inventing a URL. This repository is where that gate's semantics live
+  instead; adopting it org-wide is a separate decision for the owner.

@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+= Maintainers
+
+* Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk> — owner, final say on policy
+  semantics and on any org-wide gate rollout.
+
+== Who may merge
+
+`Branch-Floor` (inherited from the `metadatastician` org) enforces only
+`deletion` and `non_fast_forward` on the default branch: no review, no required
+status check. That is the floor, not the standard. Merge here only after:
+
+. CI green on both Julia versions, including `gate .` (the self-gate) and
+  `check-containerfile.sh`;
+. any change to `BANNED`, `ALLOWED`, `WARN_ONLY`, or the classification table is
+  called out in the PR body, because it changes the verdict for ~400 repositories
+  that may later adopt this gate;
+. any new action dependency is pinned to a full commit SHA *and* added to
+  `.github/actions.lock`.

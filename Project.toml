@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+name = "ProglangingLanguages"
+uuid = "000001a0-edc7-736d-897b-72bad923d113"
+authors = ["Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>"]
+version = "0.1.0"
+description = "Diagnostics and monitoring console for a polyglot development estate: language-policy analysis, toolchain evaluation, and benchmarking. Stdlib-only."
+license = "MPL-2.0"
+keywords = ["estate", "polyglot", "toolchain", "language-policy", "analysis", "benchmarking"]
+
+[deps]
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
+
+[compat]
+TOML = "1"
+julia = "1.10"

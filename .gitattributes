@@ -1,0 +1,8 @@
+*.jl text eol=lf
+*.sh text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.adoc text eol=lf
+Containerfile text eol=lf
+.github/actions.lock text eol=lf linguist-generated=true
+docs/** linguist-documentation=true
