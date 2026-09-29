@@ -185,7 +185,7 @@ step runs, whatever it contains.
 |===
 | workflow | run | result
 
-| `CI`
+| `CI`, first push
 | 36593207544
 | `startup_failure`, 0 jobs
 
@@ -193,21 +193,35 @@ step runs, whatever it contains.
 | 36593112885
 | `failure`, 0 jobs
 
-| throwaway probe: one job, `ubuntu-latest`, one `echo`, ASCII-only, no
-  `permissions`/`env`/`concurrency`, no actions used
-| 36594557723
+| probe: two jobs, one bare `echo`, one pinned `checkout`, plus `permissions` /
+  `env` / `concurrency`
+| 36594435261
 | `startup_failure`, 0 jobs
 
-| throwaway probe: identical, but with a non-ASCII job name and a `§` in it
-| 36594557663
+| probe: one job, `ubuntu-latest`, one `run: echo`, ASCII only, no
+  `permissions`/`env`/`concurrency`, no actions used
+| 36594694325
+| `startup_failure`, 0 jobs
+
+| probe: identical, but with a non-ASCII job name containing `§`
+| 36594697185
+| `startup_failure`, 0 jobs
+
+| `CI` after the probes were deleted and the lock repaired
+| 36595322865
 | `startup_failure`, 0 jobs
 |===
 
 So it is not the YAML of this PR: a seven-line `run: echo` cannot start either.
 Adjacent repos in the same window are fine (0 startup failures out of 30 runs in
 `hyperpolymath/hypatia`), so it is not an estate-wide runner outage.
-`GET /repos/…/actions/permissions` answers `403 Resource not accessible by
-integration` with this token, so the setting cannot be read or changed from here.
+Job counts were read back from `GET /repos/…/actions/runs/<id>/jobs`
+(`total_count: 0` on each), not inferred from the check name — Actions creates no
+check run for a startup failure, so `commits/<sha>/check-runs` shows only the
+third-party apps and `gh run view` says nothing more useful than "This run likely
+failed because of a workflow file issue." `GET /repos/…/actions/permissions`
+answers `403 Resource not accessible by integration` with this token, so the
+setting cannot be read or changed from here.
 Most likely cause is that Actions was never enabled for a repository created empty
 on 2026-09-20 (it has 2 lifecycle events in its whole history); the fix is an
 owner-side switch (Settings → Actions → General), not a change to these files.
