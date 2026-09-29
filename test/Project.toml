@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
+[deps]
+ProglangingLanguages = "000001a0-edc7-736d-897b-72bad923d113"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

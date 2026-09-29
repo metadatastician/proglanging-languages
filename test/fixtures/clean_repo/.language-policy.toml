@@ -1,0 +1,5 @@
+[policy]
+role = "core"
+
+[provers]
+required = []
