@@ -143,10 +143,24 @@ Rust-without-a-prover, Deno, Nix, Vite, an Idris2 project not doing ABI work.
 They are excluded from this repository's own gate by declaration, and a direct
 walk of them still sees everything (FINDINGS §F7).
 
-CAUTION: The test suite has not been executed yet. The sandbox this was authored
-in has no route to a Julia toolchain (`julialang-s3.julialang.org` and every
-mirror probed returned connection failures; only GitHub, PyPI and npm were
-reachable), so CI on this PR is the first run. What *was* verified locally: every
+CAUTION: The test suite has not been executed yet, and CI cannot execute it
+either. The sandbox this was authored in has no route to a Julia toolchain
+(`julialang-s3.julialang.org` and every mirror probed returned connection
+failures; only GitHub, PyPI and npm were reachable), and no workflow of any kind
+can start in this repository — including a seven-line `run: echo`, which is how
+we know the YAML is not the problem (`docs/FINDINGS.adoc` §F9). Until Actions is
+enabled for the repo, the reproducible check is local:
+
+[source,console]
+----
+$ ./tools/selfcheck.sh
+----
+
+It runs every check that does not need a runner (TOML validity including the
+`TOML` stdlib UUID, workflow pin/`actions.lock` consistency, shell lint, the
+container floor, the fixture set, the self-gate) and prints `SKIP` for what it
+cannot do, so a partial pass is never mistaken for a green build. What *was*
+verified locally: every
 Julia file parses against a real Julia grammar (`tree-sitter-julia`), both TOML
 files parse, every workflow parses, all 12 fixtures and the self-gate were
 re-derived with an independent implementation of the decision tables and agreed,

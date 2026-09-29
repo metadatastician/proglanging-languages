@@ -2,6 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
 = Workflows in this repository
 
+WARNING: no workflow in this directory can start today. Every run in this repository
+fails at startup, before any step — including a probe whose only content was
+`run: echo` — so a green tick is not available as evidence here until Actions is
+enabled for the repository (owner-side: Settings → Actions → General). See
+`docs/FINDINGS.adoc` §F9. `tools/selfcheck.sh` covers everything that can be checked
+without a runner, and prints `SKIP` rather than passing silently.
+
 [cols="1,2,3",options="header"]
 |===
 | Workflow | What it decides | How it can fail you

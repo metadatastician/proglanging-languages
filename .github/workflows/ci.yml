@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
 #
 # CI for the estate diagnostics console. Every third-party action below is pinned
-# to a full commit SHA (see .github/actions.lock) and no step installs anything at
+# to a full commit SHA (see .github/workflows/actions.lock) and no step installs anything at
 # analysis time — the upstream language gate it replaces fetched linguist and a
 # Python TOML parser at gate time behind '|| true', which is how a gate ends up
 # unable to fail (docs/FINDINGS.adoc §F5).

@@ -29,7 +29,7 @@ Repository events agree: two in total.
 |===
 | Event | Timestamp | Note
 
-| `PublicEvent` | 2026-09-20T18:17:15Z | repository created (currently private)
+| `PublicEvent` | 2026-09-20T18:17:15Z | repository created (private then; public now — see FINDINGS §F10)
 | `CreateEvent` (`main`) | 2026-09-29T12:35:28Z | the single `Initial commit`, 24-byte README
 |===
 
@@ -136,6 +136,6 @@ than the other way round.
 | dismiss / close the open PRs | nothing to dismiss | zero PRs and zero issues, ever
 | cherry-pick the relevant | yes | classification tables, detector set, policy file, CSV schema — from `cadastra`
 | merge it | yes, as this PR | `main` is protected by the org `Branch-Floor` ruleset (deletion + non-fast-forward), so this arrives by pull request
-| "security and quality matters" | see `FINDINGS.adoc` | eight measured defects in the upstream tooling, all of them fixed in the port
+| "security and quality matters" | see `FINDINGS.adoc` | ten findings in `docs/FINDINGS.adoc`: eight measured defects in the upstream tooling, all fixed in the port, plus two environment findings (§F9, §F10) that are recorded rather than fixed
 | new start point with it accommodated | this branch | `Project.toml`, gates, container, 151 assertions over 12 fixture repositories
 |===

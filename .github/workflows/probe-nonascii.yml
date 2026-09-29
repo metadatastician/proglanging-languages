@@ -1,9 +1,0 @@
-name: PROBE-nonascii
-on:
-  pull_request
-jobs:
-  b:
-    name: probe · self-gate — §F5
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo nonascii-ok

@@ -93,7 +93,7 @@ no pin, no hash, and no `PYTHONPATH` isolation.
 *In this port:* no install step, no interpreter other than Julia, no network at
 analysis time. Detection is deterministic from the file tree, so the gate result
 is reproducible from a checkout. Every third-party action in `ci.yml` is pinned
-to a full commit SHA and recorded in `.github/actions.lock`.
+to a full commit SHA and recorded in `.github/workflows/actions.lock`.
 
 == F6 — the benchmarking unit is a stub
 
@@ -161,19 +161,109 @@ network and no dependency install.
 
 == Out of scope, flagged rather than fixed
 
-* *Org `EstatePushing`* — `hyperpolymath/standards#887` is open, labelled
-  `security`, and its last comment (2026-09-22) says the ruleset was armed (10 MB
-  size cap, 200-char path cap, 45 blocked extensions, `OrganizationAdmin` dropped
-  from bypass) and `EstateTagging`'s zero-binding condition was repaired. Its
-  second acceptance criterion — "a control that flags any `active` ruleset whose
-  `rules` array is empty, org-wide" — has no evidence attached, and the issue is
-  still open. `GET /orgs/hyperpolymath/rulesets` returns 404 to this session's
-  token, so *I could not verify either criterion myself.* This repository is
-  private, which is the population #887 measured as bound (6/6 private, 0/3
-  public), so the cap does apply here: a single 40 MB fixture or an over-long path
-  will be rejected at push, not at review.
+* *Org `EstatePushing` and `EstateTagging`* — `hyperpolymath/standards#887` is open and
+  labelled `security`. Its body records `EstatePushing` as `active` with a *zero-rule*
+  array; its measurement comment (2026-09-22) tested the tightest candidate caps
+  (`max_file_size: 1 MB`, `max_file_path_length: 100`, `file_path_restriction: * *`, and
+  a `file_extension_restriction` over 44 binary/artefact extensions) and found *zero*
+  rejections in scope. Its second acceptance criterion — "a control that flags any
+  `active` ruleset whose `rules` array is empty, org-wide" — carries no evidence, and
+  `GET /orgs/hyperpolymath/rulesets` returns 404 to this session's token, so neither
+  criterion could be checked here. See §F10 for what that measurement said about *this*
+  repository, which is the part that changed while this PR was being written.
 * *`Branch-Floor`* — the only ruleset on this repo, inherited from
   `metadatastician`, enforces `deletion` + `non_fast_forward` on the default
   branch. It requires no review and no status check, which is why a bootstrap PR
   here can be merged green-with-no-reviews. Raising that floor is the owner's
   call, not a decision to slip into a project scaffold.
+
+== F9 — GitHub Actions cannot start a job in this repository at all
+
+Every workflow file that reaches this repository fails at *startup*, before any
+step runs, whatever it contains.
+
+|===
+| workflow | run | result
+
+| `CI`
+| 36593207544
+| `startup_failure`, 0 jobs
+
+| `.github/workflows/secret-scanner.yml`
+| 36593112885
+| `failure`, 0 jobs
+
+| throwaway probe: one job, `ubuntu-latest`, one `echo`, ASCII-only, no
+  `permissions`/`env`/`concurrency`, no actions used
+| 36594557723
+| `startup_failure`, 0 jobs
+
+| throwaway probe: identical, but with a non-ASCII job name and a `§` in it
+| 36594557663
+| `startup_failure`, 0 jobs
+|===
+
+So it is not the YAML of this PR: a seven-line `run: echo` cannot start either.
+Adjacent repos in the same window are fine (0 startup failures out of 30 runs in
+`hyperpolymath/hypatia`), so it is not an estate-wide runner outage.
+`GET /repos/…/actions/permissions` answers `403 Resource not accessible by
+integration` with this token, so the setting cannot be read or changed from here.
+Most likely cause is that Actions was never enabled for a repository created empty
+on 2026-09-20 (it has 2 lifecycle events in its whole history); the fix is an
+owner-side switch (Settings → Actions → General), not a change to these files.
+
+Consequences, stated plainly rather than papered over:
+
+* *No commit in this PR has been executed anywhere.* The only evidence of
+  correctness is offline: the tree-sitter parse of all Julia, the shell/CI
+  review, and a Python re-derivation of the decision table (see
+  `docs/RECOVERY.adoc`).
+* The two workflows are written *for the first run the owner gets after
+  enabling Actions*, and are not decoration: they are the mechanism that turns
+  `Pkg.test()`, the gate and the bench into evidence.
+* `tools/selfcheck.sh` exists so the checks that do not need a runner can be run
+  by a reviewer today; it reports `SKIP` for anything it cannot do and exits
+  non-zero on a real failure. It is not a substitute for `Pkg.test()`.
+* The environment's push-gate tooling reported this repository as "no
+  CI configured" and allowed the push. That is an example of a gate whose
+  denominator is "workflows I could see", which is `§F5` in another costume.
+
+== F10 — this repository moved out of the population that #887 measured
+
+`hyperpolymath/standards#887`'s D65 comment (2026-09-22) measures the org's rulesets by
+*attachment* rather than by what their conditions read like, and it names this repository
+twice:
+
+* `EstatePushing` selects `repository_name: ~ALL` yet binds to *6 of 68* repositories —
+  6 of 6 private, 0 of 3 public — and `proglanging-languages` is counted among those six,
+  as "an empty repo (`size=0KB`, `/commits` → HTTP 409 *Git Repository is empty*)".
+* `EstateTagging` has *7 real rules* and selects on
+  `repository_property: {include: [], exclude: []}`, so it binds to *0 of 10* repos
+  sampled. The comment retires the estate premise "signed tags are required org-wide".
+
+As of 2026-09-29, `GET /repos/metadatastician/proglanging-languages` returns
+`visibility: "public"`. The repository has therefore moved into the 0/3 population, which
+means:
+
+* `EstatePushing`'s caps do not bind this tree today. If it is switched back to private
+  they attach — and on the current contents they would reject nothing: the largest file
+  in this PR is 12.8 KB against a 1 MB threshold tested at zero rejections, the longest
+  path is 51 characters, and every extension is text or source (`.jl .toml .md .adoc
+  .yml .sh .json` plus `Containerfile`), not in the 44-entry binary/artefact blocklist.
+* No design decision was made to dodge a push cap that was never binding. An earlier draft
+  of this documentation asserted the opposite, because it trusted a stale `gh repo list`
+  row over `GET /repos/…`. Re-checking visibility is a one-call fact; asserting it from a
+  listing is what §F5 is about, in the other direction.
+
+Two things stay open instead of being declared satisfied:
+
+* `EstateBranching` is recorded as `active`, scope `~ALL`, with `required_signatures` and
+  `pull_request`. Five unsigned commits pushed to a non-default branch of this repository
+  anyway, and `GET /repos/…/rulesets` reports the only applicable ruleset here as
+  `Branch-Floor` (delete + non-fast-forward, no review requirement, `bypass_actors: null`).
+  A listing and an observation disagree; settling it needs org-admin read, which this token
+  does not have. Consequence for the owner, stated because it is uncomfortable: *this PR
+  can be merged with no review, no signature and no green check.* That is why the review
+  evidence is written to be reproducible by a human (`tools/selfcheck.sh`) rather than
+  delegated to a tick.
+* `#887` AC2 remains unevidenced. Landing this PR neither closes nor claims to close it.

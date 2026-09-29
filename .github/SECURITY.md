@@ -12,7 +12,7 @@ are not memory-safety ones — they are gates that pass when they should not.
   truncated walk, unparseable policy) is reported as success. `incomplete` and
   `passed` are separate fields for exactly this reason; if you can decouple them
   into a false pass, that is a bug.
-* A `.github/actions.lock` entry whose `commit:` does not match the ref used in a
+* A `.github/workflows/actions.lock` entry whose `commit:` does not match the ref used in a
   workflow — that is a moving pin wearing a pin's clothes.
 * A `Containerfile` whose base is `:latest`, unpinned, or a digest nobody
   resolved. `tools/check-containerfile.sh` exists so this cannot land quietly.

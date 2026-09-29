@@ -17,4 +17,4 @@ status check. That is the floor, not the standard. Merge here only after:
   called out in the PR body, because it changes the verdict for ~400 repositories
   that may later adopt this gate;
 . any new action dependency is pinned to a full commit SHA *and* added to
-  `.github/actions.lock`.
+  `.github/workflows/actions.lock`.
