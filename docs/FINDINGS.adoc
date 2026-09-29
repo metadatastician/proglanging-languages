@@ -1,0 +1,283 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+= Findings — defects in the upstream tooling, and what this port does about them
+:toc: macro
+:toc-placement!:
+
+Measured while porting `metadatastician/cadastra` @
+`tools/estate-migration-toolkit` (commit `91e46668`, added 2026-07-16, unmoved
+since) and its CI gate. Each finding has the evidence that produced it, so it can
+be checked rather than trusted.
+
+toc::[]
+
+== F1 — `Nix` is both banned and allowed in the same script
+
+`estate-scan.sh` declares:
+
+[source,bash]
+----
+BANNED_LANGUAGES=( ... "Nix" ... )
+ALLOWED_LANGUAGES=( ... "Nix"  # Nix banned for app code but ok in CI configs
+----
+
+`classify_repo()` tests each detected language against both lists, so a repo
+containing `flake.nix` is simultaneously banned and on-target. Its own
+anti-pattern detector treats the same file as a *finding*, while the CI gate
+treats it as a *warning*. Three artefacts, three severities, one fact.
+
+*In this port:* the ban list keeps `Nix`; the severity is a policy decision —
+`[gate] nix_severity = "warn" | "error"`, defaulting to `warn`. Triage still
+reports it (`nix_repo` fixture classifies `MIGRATE`); the gate does not fail on it
+unless told to. Both behaviours are asserted in `test/runtests.jl`.
+
+== F2 — the two banned lists are spelled differently
+
+`estate-scan.sh` uses `C#`, `F#`, `Visual Basic`; `ci/language-gate.yml` uses
+`CSharp`, `FSharp`, `VisualBasic`. Each file is internally consistent because
+each has its own extension map — but the two produce *different strings in the
+report column*, so reports from the scan and verdicts from the gate cannot be
+joined or diffed on language name.
+
+*In this port:* one map, `Languages.canonical`, with linguist spellings as the
+output form, accepting either input spelling.
+
+== F3 — extension-only detection misses extension-less build files
+
+`detect_languages_local()` maps extensions only. `Makefile`, `Dockerfile`,
+`Containerfile`, `justfile`, `CMakeLists.txt` have none, so a repo whose entire
+build layer is a forbidden system (say `Dockerfile` where the estate mandates
+Containerfiles) is invisible to the scanner.
+
+*In this port:* `NAME_MAP` for basename matches. Asserted:
+`language_for_path("Containerfile") == "Dockerfile"`.
+
+== F4 — a silent `head -500` cap, so big repos are "clean" by truncation
+
+....
+done < <(find "$repo_path" -type f ... | head -500)
+....
+
+The first 500 files decide the language set. A repository with 40,000 files is
+classified from its first 500 with no indication in the CSV that anything was
+missed. The estate has already ruled against this shape of failure once — the
+`deno-allow.txt` census keeps a control where a *failed* probe reports `ERR`
+"that would otherwise have been published as 'zero Deno estate-wide'" — and then
+shipped a scan with no equivalent control.
+
+*In this port:* `max_files` is policy-configurable (default 200,000), the walk
+sets `truncated`, a truncated scan *fails its gate*, and `incomplete` is exposed
+separately from `passed`. Three tests cover it, including that
+`considered == 3` when the cap is 3.
+
+== F5 — the CI gate cannot fail
+
+`ci/language-gate.yml` is a 311-line workflow that, in order:
+
+* runs on `ubuntu-latest` (moving image) and `actions/checkout@v4` (moving tag) —
+  against the estate's own SHA-pinning rule, which is precisely what
+  `standards#1037` (Dependabot re-introducing a broken `codeql-action` v4.38.1
+  startup-killer) was about;
+* installs tooling *at gate time*: `sudo gem install github-linguist ... || true`
+  and `pip install toml --break-system-packages -q ... || true`;
+* then falls back to extension counting if `github-linguist` is missing, also
+  silently.
+
+`|| true` on a supply-chain install means: if gem or pip fail, the gate proceeds
+with a *different, weaker* detector and reports success. A policy gate whose
+degraded mode is indistinguishable from its real mode is decoration. The
+`python3 << 'PYEOF'` heredoc also runs only because a Python interpreter is
+present on the runner — in a repository whose own ban list forbids Python — with
+no pin, no hash, and no `PYTHONPATH` isolation.
+
+*In this port:* no install step, no interpreter other than Julia, no network at
+analysis time. Detection is deterministic from the file tree, so the gate result
+is reproducible from a checkout. Every third-party action in `ci.yml` is pinned
+to a full commit SHA and recorded in `.github/workflows/actions.lock`.
+
+== F6 — the benchmarking unit is a stub
+
+`metadatastician/cadastra` @ `verification/benchmarks/` is:
+
+....
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Benchmarks Unit
+----
+
+three lines, no harness, no baseline, no gate. `benches/template_bench.sh`
+(180 lines) is a scaffold that writes timings to a file nothing reads.
+
+*In this port:* `Bench.measure` uses median + MAD over warm-up-discarded samples
+(a mean on a shared runner is an outlier with a decimal point on it), records
+bytes per rep, records the runtime environment with every result, and
+`--baseline FILE` turns a regression over 10% into exit 1. A benchmark that can
+fail CI is a measurement; one that only prints is decoration.
+
+== F7 — an analyser's own fixtures trip its own gate
+
+Test fixtures that prove the detectors work must contain banned languages and
+anti-patterns. Run the gate over the repository that hosts those fixtures and the
+repository fails itself. `estate-scan.sh` has no notion of this, and the CI gate
+has no exclusion mechanism, so the estate's own rollout would have had every
+consumer repo failing on its test data.
+
+*In this port:* `[gate] exclude = [...]` in the policy file, declared in the file
+that enables the gate. Exclusion applies to the *repo-relative* walk only: a
+direct `walk()` of `test/fixtures/kill_repo` still sees `main.py`, which the test
+suite asserts in both directions. Not silent, not structural, and reviewable in
+one line of TOML.
+
+== F8 — the reusable workflow the rollout targets does not exist
+
+`templates/language-gate-caller.yml` instructs every repo to add:
+
+[source,yaml]
+----
+jobs:
+  language-gate:
+    uses: hyperpolymath/.github/.github/workflows/language-gate.yml@main
+----
+
+That file is not there. `hyperpolymath/.github` @ `.github/workflows/` contains,
+in full: `actions.lock`, `label-triage.yml`, `labels.yml`, `push-email-notify.yml`,
+`secret-scanner.yml`. A search for `language-gate.yml` across both accounts
+returns 4 hits, all of them inside `cadastra` itself (the reusable, the caller
+template, the README, and the rollout script that references it).
+
+So `rollout-language-gate.sh` — 266 lines that write that caller into every repo
+in an org — would have produced a *"workflow could not be found"* startup failure
+in every repository it touched. It was never run: no repository outside
+`cadastra` has a language-gate caller. This is the same class of bug the estate
+files issues about constantly (a gate that derives a required context no PR can
+trigger, `standards#1040`; a required status list that is empty, `#887`).
+
+*Disposition here:* the caller is not adopted. The gate's *semantics* live in this
+repository as Julia that can be executed offline and unit-tested; publishing an
+org-wide reusable against it is an owner decision, not something to smuggle in
+through a project bootstrap. Until that decision is made, `proglanging gate .` is
+runnable in any repo with a `.language-policy.toml` and a Julia ≥ 1.10, with no
+network and no dependency install.
+
+== Out of scope, flagged rather than fixed
+
+* *Org `EstatePushing` and `EstateTagging`* — `hyperpolymath/standards#887` is open and
+  labelled `security`. Its body records `EstatePushing` as `active` with a *zero-rule*
+  array; its measurement comment (2026-09-22) tested the tightest candidate caps
+  (`max_file_size: 1 MB`, `max_file_path_length: 100`, `file_path_restriction: * *`, and
+  a `file_extension_restriction` over 44 binary/artefact extensions) and found *zero*
+  rejections in scope. Its second acceptance criterion — "a control that flags any
+  `active` ruleset whose `rules` array is empty, org-wide" — carries no evidence, and
+  `GET /orgs/hyperpolymath/rulesets` returns 404 to this session's token, so neither
+  criterion could be checked here. See §F10 for what that measurement said about *this*
+  repository, which is the part that changed while this PR was being written.
+* *`Branch-Floor`* — the only ruleset on this repo, inherited from
+  `metadatastician`, enforces `deletion` + `non_fast_forward` on the default
+  branch. It requires no review and no status check, which is why a bootstrap PR
+  here can be merged green-with-no-reviews. Raising that floor is the owner's
+  call, not a decision to slip into a project scaffold.
+
+== F9 — GitHub Actions cannot start a job in this repository at all
+
+Every workflow file that reaches this repository fails at *startup*, before any
+step runs, whatever it contains.
+
+|===
+| workflow | run | result
+
+| `CI`, first push
+| 36593207544
+| `startup_failure`, 0 jobs
+
+| `.github/workflows/secret-scanner.yml`
+| 36593112885
+| `failure`, 0 jobs
+
+| probe: two jobs, one bare `echo`, one pinned `checkout`, plus `permissions` /
+  `env` / `concurrency`
+| 36594435261
+| `startup_failure`, 0 jobs
+
+| probe: one job, `ubuntu-latest`, one `run: echo`, ASCII only, no
+  `permissions`/`env`/`concurrency`, no actions used
+| 36594694325
+| `startup_failure`, 0 jobs
+
+| probe: identical, but with a non-ASCII job name containing `§`
+| 36594697185
+| `startup_failure`, 0 jobs
+
+| `CI` after the probes were deleted and the lock repaired
+| 36595322865
+| `startup_failure`, 0 jobs
+|===
+
+So it is not the YAML of this PR: a seven-line `run: echo` cannot start either.
+Adjacent repos in the same window are fine (0 startup failures out of 30 runs in
+`hyperpolymath/hypatia`), so it is not an estate-wide runner outage.
+Job counts were read back from `GET /repos/…/actions/runs/<id>/jobs`
+(`total_count: 0` on each), not inferred from the check name — Actions creates no
+check run for a startup failure, so `commits/<sha>/check-runs` shows only the
+third-party apps and `gh run view` says nothing more useful than "This run likely
+failed because of a workflow file issue." `GET /repos/…/actions/permissions`
+answers `403 Resource not accessible by integration` with this token, so the
+setting cannot be read or changed from here.
+Most likely cause is that Actions was never enabled for a repository created empty
+on 2026-09-20 (it has 2 lifecycle events in its whole history); the fix is an
+owner-side switch (Settings → Actions → General), not a change to these files.
+
+Consequences, stated plainly rather than papered over:
+
+* *No commit in this PR has been executed anywhere.* The only evidence of
+  correctness is offline: the tree-sitter parse of all Julia, the shell/CI
+  review, and a Python re-derivation of the decision table (see
+  `docs/RECOVERY.adoc`).
+* The two workflows are written *for the first run the owner gets after
+  enabling Actions*, and are not decoration: they are the mechanism that turns
+  `Pkg.test()`, the gate and the bench into evidence.
+* `tools/selfcheck.sh` exists so the checks that do not need a runner can be run
+  by a reviewer today; it reports `SKIP` for anything it cannot do and exits
+  non-zero on a real failure. It is not a substitute for `Pkg.test()`.
+* The environment's push-gate tooling reported this repository as "no
+  CI configured" and allowed the push. That is an example of a gate whose
+  denominator is "workflows I could see", which is `§F5` in another costume.
+
+== F10 — this repository moved out of the population that #887 measured
+
+`hyperpolymath/standards#887`'s D65 comment (2026-09-22) measures the org's rulesets by
+*attachment* rather than by what their conditions read like, and it names this repository
+twice:
+
+* `EstatePushing` selects `repository_name: ~ALL` yet binds to *6 of 68* repositories —
+  6 of 6 private, 0 of 3 public — and `proglanging-languages` is counted among those six,
+  as "an empty repo (`size=0KB`, `/commits` → HTTP 409 *Git Repository is empty*)".
+* `EstateTagging` has *7 real rules* and selects on
+  `repository_property: {include: [], exclude: []}`, so it binds to *0 of 10* repos
+  sampled. The comment retires the estate premise "signed tags are required org-wide".
+
+As of 2026-09-29, `GET /repos/metadatastician/proglanging-languages` returns
+`visibility: "public"`. The repository has therefore moved into the 0/3 population, which
+means:
+
+* `EstatePushing`'s caps do not bind this tree today. If it is switched back to private
+  they attach — and on the current contents they would reject nothing: the largest file
+  in this PR is 12.8 KB against a 1 MB threshold tested at zero rejections, the longest
+  path is 51 characters, and every extension is text or source (`.jl .toml .md .adoc
+  .yml .sh .json` plus `Containerfile`), not in the 44-entry binary/artefact blocklist.
+* No design decision was made to dodge a push cap that was never binding. An earlier draft
+  of this documentation asserted the opposite, because it trusted a stale `gh repo list`
+  row over `GET /repos/…`. Re-checking visibility is a one-call fact; asserting it from a
+  listing is what §F5 is about, in the other direction.
+
+Two things stay open instead of being declared satisfied:
+
+* `EstateBranching` is recorded as `active`, scope `~ALL`, with `required_signatures` and
+  `pull_request`. Five unsigned commits pushed to a non-default branch of this repository
+  anyway, and `GET /repos/…/rulesets` reports the only applicable ruleset here as
+  `Branch-Floor` (delete + non-fast-forward, no review requirement, `bypass_actors: null`).
+  A listing and an observation disagree; settling it needs org-admin read, which this token
+  does not have. Consequence for the owner, stated because it is uncomfortable: *this PR
+  can be merged with no review, no signature and no green check.* That is why the review
+  evidence is written to be reproducible by a human (`tools/selfcheck.sh`) rather than
+  delegated to a tick.
+* `#887` AC2 remains unevidenced. Landing this PR neither closes nor claims to close it.

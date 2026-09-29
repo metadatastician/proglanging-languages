@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+#
+# AI-MANIFEST.a2ml — AI agent work allocation and policy
+
+[metadata]
+version = "0.1.0"
+last-updated = "2026-09-29"
+
+[project]
+name = "ProglangingLanguages"
+purpose = "Diagnostics and monitoring console for a polyglot development estate: language-policy analysis, toolchain evaluation, and benchmarking. Julia, stdlib-only, Wolfi container."
+
+[ai-allocation]
+agents = [
+  { name = "CLAUDE", role = "the port itself: detector semantics, classification table, Julia implementation, CI/CD, container floor" },
+  { name = "CHATGPT", role = "prose review of docs/FINDINGS.adoc and docs/RECOVERY.adoc; wording of acceptance claims" },
+  { name = "GEMINI", role = "estate sweeps (425 repos, branch and code search) that established what was and was not recoverable" },
+  { name = "VIBE", role = "none yet: there is no UI in this repo. A monitoring front-end, if it comes, is theirs" },
+]
+
+[provenance]
+# What an agent wrote vs what a human decided. Read before trusting a line.
+ported-from = "metadatastician/cadastra @ tools/estate-migration-toolkit (commit 91e46668, 2026-07-16)"
+authored-by-agent = ["src/*.jl", "bin/proglanging.jl", "test/runtests.jl", ".github/workflows/*", "Containerfile", "tools/*.sh", "docs/*.adoc"]
+human-ratifications-pending = [
+  "the F1 ruling (Nix warn-only) is an engineering choice, not an estate decision",
+  "whether this repo publishes an org-wide reusable gate (FINDINGS §F8)",
+  "whether Branch-Floor stays as the merge floor for this repository",
+]
+unverified-locally = "Pkg.test() has never run: no Julia toolchain was reachable from the authoring sandbox. CI is the first execution."
+
+[policy]
+rules = [
+  "Update THIS file during sessions. Do NOT recreate per-repo TODO files.",
+  "An agent may not widen BANNED/ALLOWED or the classification table without an owner ruling recorded above.",
+  "Any claim in this repo must be reproducible offline by proglanging doctor/gate and check-containerfile.sh.",
+]
+
+[work-allocation]
+items = [
+  { agent = "CLAUDE", task = "make Pkg.test() green on 1.10 and 1.11 on the first CI run; fix what it finds, do not mute it" },
+  { agent = "GEMINI", task = "re-run the estate sweep to see whether a pre-port console exists in any local tree (docs/RECOVERY.adoc §What is unrecoverable)" },
+  { agent = "owner", task = "ratify or overrule the three pending items in [provenance]" },
+]

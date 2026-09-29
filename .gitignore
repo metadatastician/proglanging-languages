@@ -1,0 +1,14 @@
+# Julia
+Manifest.toml
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+deps/deps.jl
+docs/build/
+docs/site/
+
+# Local scan output — reports are artefacts, never committed
+estate-triage-report.csv
+proglanging-report.*
+proglanging-bench.json
+.scratch/

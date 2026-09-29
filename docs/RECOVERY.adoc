@@ -1,0 +1,141 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+= Recovery ledger — where the console went, and what was rebuilt
+:toc: macro
+:toc-placement!:
+
+The build request was "find the work on the programming-language toolchain
+analysis, evaluation and benchmarking tool, cherry-pick what is relevant, merge
+it". This page is the audit of that search: what was measured, what was found,
+what could not be found, and what is now in `main` as a result.
+
+Everything below is a measurement with a command behind it, not a recollection.
+
+toc::[]
+
+== The repository had nothing to merge
+
+[source,console]
+----
+$ gh pr list   --repo metadatastician/proglanging-languages --state all     -> []
+$ gh issue list --repo metadatastician/proglanging-languages --state all    -> []
+$ git ls-remote origin                                                      -> refs/heads/main only
+----
+
+No `refs/pull/*` exists at all, which on GitHub means no pull request has ever
+been opened against this repository — not open, not closed, not merged.
+Repository events agree: two in total.
+
+|===
+| Event | Timestamp | Note
+
+| `PublicEvent` | 2026-09-20T18:17:15Z | repository created (private then; public now — see FINDINGS §F10)
+| `CreateEvent` (`main`) | 2026-09-29T12:35:28Z | the single `Initial commit`, 24-byte README
+|===
+
+`diskUsage` is 0 KB. `size: 0`. The only blob in the tree is `README.md`, whose
+entire content is a title line.
+
+== Corroboration from the estate's own census
+
+`hyperpolymath/standards` @ `.machine_readable/deno-allow.txt` recorded, on
+2026-09-22:
+
+____
+Result: 11 carry a Deno config, 446 do not, *1 has no commits
+(`metadatastician/proglanging-languages`)*, 0 probe errors.
+____
+
+That census probed 458 repositories with `git/trees/<default>?recursive=1`. This
+repository was, on that date, indistinguishable from empty. So the console was
+never on GitHub — which rules out "restore a deleted branch" and rules out
+"cherry-pick a closed PR", because there is no object to point at.
+
+== The estate-wide sweep for orphan work
+
+|===
+| Probe | Method | Result
+
+| Orphan agent branches | 425 repos in both accounts, every branch name matched against `arena|proglang|toolchain|bench|analys|lang-|isa` | 6 refs, none of them language analysis
+| Forks | `GET /repos/.../forks` | none
+| Tags, releases | API | none
+| Code mentioning this repo | `search/code?q=proglanging+org:(both)` | 2 hits: this README, and the census line above
+| Julia registry entries | `hyperpolymath/julia-professional-registry` (55 entries, `REQUIRES_INITIALISATION.adoc`) | no such package registered
+|===
+
+The six orphan refs, all of them legitimate work on their own repos, retained
+here so the next search does not repeat it:
+
+....
+hyperpolymath/CoprocessorRuntime.jl   arena/01a0de6b-coprocessorruntime-jl   (906c2f6, 2026-09-26)
+hyperpolymath/MetaManifold-WebUI      arena/01a0db23-metamanifold-webui       (0d1fd68, 2026-09-29)
+hyperpolymath/MetaManifold-WebUI      arena/01a0de46-metamanifold-webui       (bb663fe, 2026-09-27)
+hyperpolymath/ipv6-tools              arena/01a0ec5a-ipv6-tools              (d1a8a48, 2026-09-29)
+metadatastician/metadatastician-governance arena/01a0ec80-...                (39f9169, 2026-09-29)
+metadatastician/svalinn               arena/01a0ed2f-svalinn                 (ff86b9f, 2026-09-29)
+....
+
+Note `hyperpolymath/standards#1055` reported *8* `arena/*` refs estate-wide; 6
+survive. Agent branches are being garbage-collected, so the window in which an
+orphan ref can be rescued is short.
+
+== Where the analysis tooling actually lives
+
+The only real "language toolchain analysis, evaluation and benchmarking" code in
+either account is in `metadatastician/cadastra`, under
+`tools/estate-migration-toolkit/`, added by `91e46668` on 2026-07-16 and
+unmoved since:
+
+|===
+| Upstream file | Lines | What it is | Disposition here
+
+| `scripts/estate-scan.sh` | 455 | banned/allowed language sets, 8 anti-pattern detectors, classification table, CSV report | **ported** to `src/Languages.jl`, `src/Detect.jl`, `src/Classify.jl`, `src/Report.jl`
+| `ci/language-gate.yml` | 311 | the same checks as a reusable workflow | **not adopted as-is** — see `FINDINGS.adoc` §F5 and §F8
+| `scripts/rollout-language-gate.sh` | 266 | writes a caller into every repo | **not ported**; its target does not exist (§F8)
+| `templates/.language-policy.toml` | 3.3 KB | per-repo policy file | **adopted**, with `[gate]` extensions (`nix_severity`, `strict`, `max_files`, `exclude`)
+| `templates/language-gate-caller.yml` | 17 | caller stub | not adopted (§F8)
+| `benches/template_bench.sh` | 180 | benchmark scaffold | superseded by `src/Bench.jl`
+| `verification/benchmarks/README.adoc` | 3 | `= Benchmarks Unit` and nothing else | the gap this repo fills (§F6)
+|===
+
+The CSV schema is unchanged, deliberately:
+
+....
+source,name,primary_language,all_languages,classification,antipatterns,last_activity,stars_or_commits,forks,description
+....
+
+so any `estate-triage-report.csv` the estate already holds can be fed to
+`proglanging report <file>` and re-counted without a re-scan.
+
+== What is unrecoverable, and where a copy may still exist
+
+The Julia console itself — the thing this repository was created for on
+2026-09-20 — has no object anywhere in either account. Nothing in this PR can
+recover it, because there is nothing to recover *from*.
+
+The strongest surviving pointer to a local copy is the toolkit's own quick start,
+which names the machine the analysis was run against:
+
+....
+./scripts/estate-scan.sh --github hyperpolymath metadatastician \
+  --local ~/home/hyperpolymath/developer/hyper-repos ~/home/hyperpolymath/developer/meta-repos
+....
+
+and `standards#678` measured that 132 estate repositories track files their own
+`.gitignore` hides — so a `Manifest.toml`, a `proglanging-report.csv`, or a
+whole unreferenced directory can still be sitting in those trees. If a
+`git status --ignored` in either directory turns up an untracked Julia project,
+that is the original work and this scaffold should be rebased onto it rather
+than the other way round.
+
+== Disposition of the request
+
+|===
+| Asked | Done | Note
+
+| dismiss / close the open PRs | nothing to dismiss | zero PRs and zero issues, ever
+| cherry-pick the relevant | yes | classification tables, detector set, policy file, CSV schema — from `cadastra`
+| merge it | yes, as this PR | `main` is protected by the org `Branch-Floor` ruleset (deletion + non-fast-forward), so this arrives by pull request
+| "security and quality matters" | see `FINDINGS.adoc` | ten findings in `docs/FINDINGS.adoc`: eight measured defects in the upstream tooling, all fixed in the port, plus two environment findings (§F9, §F10) that are recorded rather than fixed
+| new start point with it accommodated | this branch | `Project.toml`, gates, container, 151 assertions over 12 fixture repositories
+|===

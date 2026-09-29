@@ -1,0 +1,106 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+#
+# CI for the estate diagnostics console. Every third-party action below is pinned
+# to a full commit SHA (see .github/workflows/actions.lock) and no step installs anything at
+# analysis time — the upstream language gate it replaces fetched linguist and a
+# Python TOML parser at gate time behind '|| true', which is how a gate ends up
+# unable to fail (docs/FINDINGS.adoc §F5).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  JULIA_NUM_THREADS: 2
+
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} · tests, self-gate, container floor
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["1.10", "1.11"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # v3.0.2
+        with:
+          version: "${{ matrix.version }}"
+
+      - name: Instantiate
+        run: julia --project=. -e 'using Pkg; Pkg.resolve(); Pkg.instantiate()'
+
+      - name: Test
+        run: julia --project=. -e 'using Pkg; Pkg.test(; coverage=true)'
+
+      - name: Self-gate — the analyser must pass its own policy
+        run: julia --project=. bin/proglanging.jl gate .
+
+      - name: Doctor — the console runs and says what it knows
+        run: julia --project=. bin/proglanging.jl doctor
+
+      - name: Benchmark the analyser on itself
+        run: julia --project=. bin/proglanging.jl bench . --reps 3 --csv proglanging-bench.csv
+
+      - name: Container floor
+        run: sh ./tools/check-containerfile.sh
+
+      - name: Shell lint
+        run: |
+          set -eu
+          for f in tools/*.sh; do
+            sh -n "$f"
+            printf 'ok:   %s parses\n' "$f"
+          done
+
+      - name: Workflow YAML must parse
+        run: |
+          set -eu
+          ruby -ryaml -e '
+            Dir[".github/workflows/*.yml"].sort.each do |f|
+              YAML.load_file(f, aliases: true)
+              puts "ok:   #{f} parses"
+            end
+            raise "no workflows found" if Dir[".github/workflows/*.yml"].empty?
+          '
+
+  scan:
+    name: Triage report artefact (this repo only, no org-wide rollout)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # v3.0.2
+        with:
+          version: "1.11"
+
+      - name: Instantiate
+        run: julia --project=. -e 'using Pkg; Pkg.resolve(); Pkg.instantiate()'
+
+      - name: Scan this repository
+        run: |
+          set -eu
+          mkdir -p out
+          julia --project=. bin/proglanging.jl scan --local . --allow-incomplete --csv out/estate-triage-report.csv
+          test -s out/estate-triage-report.csv
+          head -3 out/estate-triage-report.csv

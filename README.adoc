@@ -1,0 +1,173 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+= proglanging-languages
+:toc: macro
+:toc-placement!:
+
+Diagnostics and monitoring console for a polyglot development estate: which
+languages a repository actually contains, which of them the estate's language
+policy forbids, which architectural anti-patterns it shows, and how long the
+analysis itself takes.
+
+Julia, standard library only. No network at analysis time. Containerised on
+Wolfi.
+
+toc::[]
+
+== Why this repository exists
+
+The estate's toolchain analysis, evaluation and benchmarking logic lived as shell
+inside `metadatastician/cadastra` — `tools/estate-migration-toolkit/` — with a
+CI gate that could not fail, a rollout script pointing at a reusable workflow
+that does not exist, and a benchmarking unit that was three lines of AsciiDoc.
+This repository is the port: the semantics kept, the defects closed, each one
+recorded in xref:docs/FINDINGS.adoc[`docs/FINDINGS.adoc`], and the recovery audit
+(including what could *not* be recovered) in
+xref:docs/RECOVERY.adoc[`docs/RECOVERY.adoc`].
+
+== Console
+
+'`doctor` is the one command whose output is environment-specific; the block below is
+the output *shape*, from the 2026-09-29 build, not a promise about your runtime.
+
+[source,console]
+----
+$ julia --project=. bin/proglanging.jl doctor
+proglanging 0.1.0
+julia 1.11.9 (64-bit, 4 threads, x86_64-linux-gnu)
+banned languages: 25 · allowed: 20 · warn-only: 3
+detectors: 8 (NIF_WITHOUT_SNIF, UNVERIFIED_RUST, DENO_NOT_BUN, NODE_NOT_BUN, DIRECT_FFI_NO_HEXADECA, IDRIS2_NOT_ABI_ROLE, NIX_PRESENT, VITE_DEBATE)
+classes: DONE, CLEAN, MIGRATE, KILL, COMMUNITY_OK, COMMUNITY_NEEDS_FIX, ARCHIVED, FORK, SCAN_FAILED
+----
+
+As a package:
+
+[source,julia]
+----
+using ProglangingLanguages
+
+sweep = analyze("/path/to/meta-repos"; github = ["metadatastician"])
+println(summary(sweep.rows))
+sweep.incomplete && error("partial scan — not a pass")
+
+v = analyze_directory("/path/to/one-repo")
+v.verdict.classification     # :DONE :CLEAN :MIGRATE :KILL :COMMUNITY_* :SCAN_FAILED
+v.passed, v.reasons           # the gate verdict, and every reason for it
+v.verdict.evidence            # pattern → the files that produced it
+----
+
+== Commands
+
+|===
+| Command | Decides | Exit code
+
+| `gate <repo> [--strict]`
+| one repository against its own `.language-policy.toml`
+| 0 pass · 1 fail
+
+| `scan [--local DIR …] [--github ORG …] [--csv OUT] [--shallow] [--max-files N]`
+| a triage report in the estate CSV schema
+| 0 · 3 if incomplete (unless `--allow-incomplete`)
+
+| `report <report.csv>`
+| re-count an existing `estate-triage-report.csv`, no re-scan
+| 0
+
+| `bench [repo] [--reps N] [--csv OUT] [--baseline FILE]`
+| walk / detect / assess timings; regression check against a baseline CSV
+| 0 · 1 on regression beyond 10%
+
+| `doctor`
+| the tool runs, and what policy sets it holds
+| 0
+|===
+
+A scan that could not complete exits 3. A gate that was given a truncated walk
+fails. A benchmark with a baseline can fail CI. Every check here is capable of
+saying no, which is the only property that makes a green run worth anything.
+
+== Policy file
+
+`+`https://github.com/metadatastician/proglanging-languages/blob/main/.language-policy.toml[.language-policy.toml]`+`
+at the repo root; absent means the strict default, and the gate records that it
+applied a default rather than a decision.
+
+[source,toml]
+----
+[policy]
+role = "core"                # core | community-adapter | tool | research | deprecated
+
+[allowed_languages]
+extra_allowed = []           # honoured only for community-adapter, as upstream
+
+[provers]
+required = ["gnatprove"]     # [] to opt out explicitly, which is not the same as omitting it
+
+[runtime]
+js = "bun"
+
+[ffi]
+method = "hexadeca"          # "none" disables the direct-FFI detector
+
+[gate]
+nix_severity = "warn"        # see FINDINGS §F1
+strict = false
+max_files = 200000           # truncation is reported, and fails the gate
+exclude = ["test/fixtures"]  # declared exclusions, never implicit ones
+----
+
+== Container
+
+[source,console]
+----
+$ podman build -t proglanging-languages:dev .
+$ podman run --rm -v "$PWD:/data:ro" proglanging-languages:dev gate /data
+----
+
+Wolfi base, digest-pinned on the `FROM` line, numeric non-root user, no
+pipe-to-shell. `tools/check-containerfile.sh` enforces those as seven rules and
+runs in CI; `tools/pin-base.sh` advances the digest with a resolver
+(`crane`/`skopeo`/`podman`) and refuses to write a digest it could not resolve.
+
+== Development
+
+[source,console]
+----
+$ julia --project=. -e 'using Pkg; Pkg.test()'      # 151 assertions, 12 fixture repos
+$ julia --project=. bin/proglanging.jl gate .        # the console must pass its own gate
+$ sh tools/check-containerfile.sh
+----
+
+`test/fixtures/` holds deliberately non-compliant repositories — Python-only,
+Rust-without-a-prover, Deno, Nix, Vite, an Idris2 project not doing ABI work.
+They are excluded from this repository's own gate by declaration, and a direct
+walk of them still sees everything (FINDINGS §F7).
+
+CAUTION: The test suite has not been executed yet, and CI cannot execute it
+either. The sandbox this was authored in has no route to a Julia toolchain
+(`julialang-s3.julialang.org` and every mirror probed returned connection
+failures; only GitHub, PyPI and npm were reachable), and no workflow of any kind
+can start in this repository — including a seven-line `run: echo`, which is how
+we know the YAML is not the problem (`docs/FINDINGS.adoc` §F9). Until Actions is
+enabled for the repo, the reproducible check is local:
+
+[source,console]
+----
+$ ./tools/selfcheck.sh
+----
+
+It runs every check that does not need a runner (TOML validity including the
+`TOML` stdlib UUID, workflow pin/`actions.lock` consistency, shell lint, the
+container floor, the fixture set, the self-gate) and prints `SKIP` for what it
+cannot do, so a partial pass is never mistaken for a green build. What *was*
+verified locally: every
+Julia file parses against a real Julia grammar (`tree-sitter-julia`), both TOML
+files parse, every workflow parses, all 12 fixtures and the self-gate were
+re-derived with an independent implementation of the decision tables and agreed,
+and `tools/check-containerfile.sh` was run for both a pass and a deliberate
+failure.
+
+== Licence
+
+Code: MPL-2.0. Documentation: CC-BY-SA-4.0. SPDX headers on every file, with the
+origin named where a file was adapted — see xref:docs/RECOVERY.adoc[the provenance ledger].

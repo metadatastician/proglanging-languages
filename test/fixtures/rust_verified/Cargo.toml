@@ -1,0 +1,6 @@
+[package]
+name = "v"
+version = "0.1.0"
+
+[dependencies]
+kani = "0.52"

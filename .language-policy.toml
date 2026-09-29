@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+#
+# .language-policy.toml — this repo's own language and architecture policy.
+#
+# Adapted from metadatastician/cadastra @
+# tools/estate-migration-toolkit/templates/.language-policy.toml (cherry-picked
+# 2026-09-29). See docs/RECOVERY.adoc for the provenance ledger and
+# docs/FINDINGS.adoc for the upstream defects this file works around.
+
+[policy]
+# This repo *is* the gate implementation, so it declares itself a tool: it
+# reports policy for others and must not inherit the "no policy file" default.
+role = "tool"
+
+[allowed_languages]
+extra_allowed = []
+
+[provers]
+# No Rust code here (Julia + POSIX shell only), so no prover is required.
+required = []
+
+[runtime]
+js = "bun"
+
+[ffi]
+method = "none"
+
+[gate]
+# `Nix` is listed as banned AND allowed by the upstream scan script; it is
+# resolved here as warn-only and the reasoning is on record (FINDINGS §F1).
+nix_severity = "warn"
+strict = false
+max_files = 200000
+# The fixture repositories under test/fixtures deliberately contain banned
+# languages and anti-patterns — that is what they exist to prove the detectors
+# detect. They are excluded from *this* repo's gate by declaration, not by
+# silence; a direct walk of a fixture still sees everything (FINDINGS §F7).
+exclude = ["test/fixtures"]

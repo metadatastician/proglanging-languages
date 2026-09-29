@@ -1,0 +1,5 @@
+[policy]
+role = "community-adapter"
+
+[allowed_languages]
+extra_allowed = ["ReScript"]
