@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
+= Architecture
+
+== Shape
+
+....
+bin/proglanging.jl      CLI: gate · scan · report · bench · doctor (exit codes are part of the API)
+src/ProglangingLanguages.jl
+  Languages.jl          extension+basename → language; banned / allowed / warn-only sets; walk()
+  Policy.jl             .language-policy.toml (TOML stdlib); strict defaults when absent
+  Detect.jl             8 anti-pattern detectors over the walked tree only
+  Classify.jl           the decision table (triage) and the gate verdict (CI) — separate on purpose
+  Report.jl             estate CSV schema, per-field counting, Markdown rendering
+  Scan.jl               local directories; GitHub orgs via gh (deep clone or shallow metadata)
+  Bench.jl             median/MAD timing harness, CSV baseline, regression verdict
+....
+
+Two kinds of answer, never conflated:
+
+* *classification* — `DONE / CLEAN / MIGRATE / KILL / COMMUNITY_OK /
+  COMMUNITY_NEEDS_FIX / ARCHIVED / FORK / SCAN_FAILED`, a triage row, upstream's
+  table preserved so old reports still read correctly;
+* *gate verdict* — `passed` plus `reasons`, severity-aware (`errors` fail,
+  `warnings` fail only under `strict`), and it fails on incompleteness.
+
+`analyze_directory` returns both plus the raw `files` inventory, `findings`,
+`policy` and `notes`, so a caller can disagree with the verdict and show why.
+
+== Invariants
+
+. *Nothing fails open.* A missing policy file, an unparseable policy, a failed
+  clone, a truncated walk, an unreadable directory: each is a note and each can
+  fail the gate. No `|| true` anywhere in the analysis path.
+. *No network at analysis time.* `Languages.walk`, `Detect.analyse`,
+  `Classify`, `Report` touch only the filesystem. Only `Scan.github_org` shells
+  out (to `gh`), and it degrades to `incomplete = true` rather than to an empty
+  report.
+. *Deterministic given a tree.* Same files, same policy, same answer — no
+  linguist, no runtime installs, no moving base images in the analysis path.
+. *Stdlib only.* `TOML` is the sole dependency, and it is a stdlib.
+. *The tool must pass its own gate.* `proglanging gate .` is a CI step, and a test.
+
+== What is deliberately not here
+
+No org-wide reusable workflow (FINDINGS §F8 explains why the upstream one cannot
+be adopted), no CodeQL or Hypatia lane while their estate issues are open
+(`.github/workflows/README.adoc` names them), and no rollout script: writing
+policy into 400+ repositories is a governance action, not a library feature.
