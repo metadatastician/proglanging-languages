@@ -135,7 +135,7 @@ than the other way round.
 
 | dismiss / close the open PRs | nothing to dismiss | zero PRs and zero issues, ever
 | cherry-pick the relevant | yes | classification tables, detector set, policy file, CSV schema — from `cadastra`
-| merge it | yes, as this PR | `main` is protected by the org `Branch-Floor` ruleset (deletion + non-fast-forward), so this arrives by pull request
-| "security and quality matters" | see `FINDINGS.adoc` | ten findings in `docs/FINDINGS.adoc`: eight measured defects in the upstream tooling, all fixed in the port, plus two environment findings (§F9, §F10) that are recorded rather than fixed
+| merge it | yes — merged as `e4be8d5` | org rulesets allow only `squash`/`rebase` into `main` and require signed commits, so rebase was refused and squash was the only method GitHub would sign (§F12)
+| "security and quality matters" | see `FINDINGS.adoc` | twelve findings in `docs/FINDINGS.adoc`: eight measured defects in the upstream tooling, all fixed in the port, plus four environment findings (§F9–§F12) recorded rather than fixed — CI that cannot start here, a stale ruleset measurement, and a signing policy that chose the merge method
 | new start point with it accommodated | this branch | `Project.toml`, gates, container, 151 assertions over 12 fixture repositories
 |===

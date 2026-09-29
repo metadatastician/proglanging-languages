@@ -24,7 +24,11 @@ Deliberately absent, with reasons in `../../docs/FINDINGS.adoc`:
 
 * *CodeQL* — three estate issues are open on default-setup vs committed
   configurations colliding (`hyperpolymath/standards#1031`, `#1033`, `#1037`);
-  adding a second scanning lane here would reproduce that.
+  adding a second scanning lane here would reproduce that. Note the asymmetry this
+  leaves: the org's `EstateBranching` ruleset names CodeQL as a *required* scanning
+  tool with `alerts_threshold: errors`, no CodeQL analysis has ever been reported for
+  this repository, and the merge still went through — an unsatisfied requirement that
+  enforces nothing (`../../docs/FINDINGS.adoc` §F11).
 * *Hypatia scan* — the reusable at the pin other repos use emits no SARIF
   (`hyperpolymath/standards#1050`), so a green check here would mean nothing.
 * *The estate `language-gate` reusable* — `hyperpolymath/.github` publishes no
