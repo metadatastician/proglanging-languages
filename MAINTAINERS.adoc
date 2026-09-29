@@ -18,3 +18,32 @@ status check. That is the floor, not the standard. Merge here only after:
   that may later adopt this gate;
 . any new action dependency is pinned to a full commit SHA *and* added to
   `.github/workflows/actions.lock`.
+
+== Merging into `main` (measure the rules, do not remember them)
+
+`main` here is governed by org rulesets that are readable *without* admin, and that
+change what you can do:
+
+[source,console]
+----
+$ gh api repos/metadatastician/proglanging-languages/rules/branches/main
+----
+
+As measured on 2026-09-29, `EstateBranching` (id 18225024) sets
+`allowed_merge_methods: [squash, rebase]`, `required_signatures`,
+`require_code_owner_review`, `required_review_thread_resolution` and a
+`code_scanning` requirement naming CodeQL — while
+`required_approving_review_count` is `0`. Practical consequences:
+
+* *`--merge` is not available*, and *`--rebase` fails unless the commits are signed by
+  their author* (GitHub refuses: "Rebase merges cannot be automatically signed").
+  Squash works because GitHub signs the commit it makes. So a PR that wants its
+  commit structure preserved on `main` needs authors with signing keys configured —
+  not a DCO `Signed-off-by` trailer, which is a statement, not a signature.
+* *No status check is required*, so nothing stops a merge of code that has never
+  been executed. `tools/selfcheck.sh` exists so that at least the offline half is
+  cheap to run before you press the button; `Pkg.test()` is not part of that half on
+  a machine without Julia, and CI cannot cover it here until Actions is enabled
+  (`docs/FINDINGS.adoc` §F9).
+* *Always pass the head SHA*: `gh pr merge <n> --squash --match-head-commit <sha>`,
+  so a push that lands while you are reviewing cannot sneak under the approval.

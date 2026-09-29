@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell (hyperpolymath)
-= Findings — defects in the upstream tooling, and what this port does about them
+= Findings — defects in the upstream tooling, what this port does about them, and what the environment refused to do
 :toc: macro
 :toc-placement!:
 
-Measured while porting `metadatastician/cadastra` @
+F1–F8 were measured while porting `metadatastician/cadastra` @
 `tools/estate-migration-toolkit` (commit `91e46668`, added 2026-07-16, unmoved
-since) and its CI gate. Each finding has the evidence that produced it, so it can
-be checked rather than trusted.
+since) and its CI gate; each one is a defect in that tooling, and each is fixed in
+this tree. F9–F12 are about the environment this repository lands in — CI that
+cannot start, a ruleset stack whose org-level documentation had gone stale, and a
+signing policy that picked our merge method for us. They are *recorded, not fixed*,
+because none of them is fixable from inside the repository, and each carries the
+call or the run id that produced it so it can be re-checked rather than trusted.
 
 toc::[]
 
@@ -210,6 +214,10 @@ step runs, whatever it contains.
 | `CI` after the probes were deleted and the lock repaired
 | 36595322865
 | `startup_failure`, 0 jobs
+
+| `CI` on `main`, after this branch merged (e4be8d5)
+| 36595738867
+| `startup_failure`, 0 jobs
 |===
 
 So it is not the YAML of this PR: a seven-line `run: echo` cannot start either.
@@ -225,6 +233,13 @@ setting cannot be read or changed from here.
 Most likely cause is that Actions was never enabled for a repository created empty
 on 2026-09-20 (it has 2 lifecycle events in its whole history); the fix is an
 owner-side switch (Settings → Actions → General), not a change to these files.
+
+`main` is not special: `CI` failed the same way on the merge commit, and
+`secret-scanner.yml` has now failed on *every* push it has seen — 7 runs,
+`36593112885` through `36595737075`, one per commit, none of them ever able to
+start. A workflow wired to fire on every push to `main` that has never once run
+is not protection; it is a red herring that reviewers learn to ignore, which is
+the failure mode in `§F5` wearing a `security` label.
 
 Consequences, stated plainly rather than papered over:
 
@@ -281,3 +296,73 @@ Two things stay open instead of being declared satisfied:
   evidence is written to be reproducible by a human (`tools/selfcheck.sh`) rather than
   delegated to a tick.
 * `#887` AC2 remains unevidenced. Landing this PR neither closes nor claims to close it.
+== F11 — what the org rulesets actually do here, read from a non-admin endpoint
+
+`hyperpolymath/standards#887` measured the org's ruleset stack and concluded that
+`EstateTagging` "binds to 0 of 10 repositories" via an empty `repository_property`
+condition, and that `EstateBranching` is `active` with `required_signatures` at scope
+`~ALL` while five unsigned commits landed anyway. Both rows needed re-measuring, and
+this repository is where they got re-measured. The endpoint that works without admin
+is not the org one (404 for this token) but the repository one:
+
+[source,console]
+----
+$ gh api repos/metadatastician/proglanging-languages/rules/branches/main
+$ gh api repos/metadatastician/proglanging-languages/rulesets
+$ gh api repos/metadatastician/proglanging-languages/rulesets/18225024
+----
+
+Five rulesets are attached, all `active`: `Branch-Floor` (23868655),
+`Estate Baseline` (18221978), `EstateBranching` (18225024), `EstateTagging`
+(18225051), `Tag-Floor` (23868851). Reading their conditions and rules directly:
+
+* *`EstateTagging` binds here now.* Its tag condition is
+  `include: ["~ALL"]`, not the empty `repository_property` set #887 recorded, and it
+  carries `deletion`, `non_fast_forward`, `required_signatures`, `workflows`. So the
+  premise #887 retired ("signed tags are required org-wide") is *true again* as of
+  today — and, more to the point, #887's "teeth without scope" row is stale.
+* *`EstatePushing` is not attached at all* — consistent with #887's 6/6-private vs
+  0/3-public split, since this repository is public. It is also not readable through
+  a repository endpoint when it is not attached, so its rule count could not be
+  checked from here at all; #887's "zero rules" remains the only measurement of it.
+* *`Estate Baseline` forbids this repository's current visibility:*
+  `repository_visibility: {public: false, internal: true, private: true}`. A
+  visibility rule gates the *change*, not the state, so the flip to public left
+  nothing to correct. Bringing the repo back into compliance is a one-call owner
+  action (`gh repo edit --visibility private`); if taken, `EstatePushing` attaches
+  — with the rule count #887 says is empty, so nothing changes for pushes.
+* *`code_scanning` names CodeQL with `alerts_threshold: errors`, and the merge was
+  not blocked by it.* No CodeQL analysis exists for this repository
+  (`/code-scanning/analysis-status` → `Not Found`; `/code-scanning/alerts` → 403 to
+  this token) even though a `CodeQL Setup` run appears against `main`. A required
+  tool that never reports is an unsatisfied rule that enforces nothing — the exact
+  shape #887 was opened for, one layer down.
+
+== F12 — "require signed commits" silently chose this repository's merge method
+
+`EstateBranching` allows only `squash` and `rebase`, and requires signed commits. The
+consequence is not obvious from either rule alone:
+
+[source,console]
+----
+$ gh api -X PUT repos/…/pulls/1/merge -f merge_method=rebase
+405 Base branch requires signed commits. Rebase merges cannot be automatically signed by GitHub
+
+$ gh api -X PUT repos/…/pulls/1/merge -f merge_method=squash
+200 {"merged": true, "sha": "e4be8d5…"}
+----
+
+Squash succeeded because GitHub signs the single commit it creates; rebase was
+refused because it replays the author's unsigned commits. A merge commit was never
+offered. So the history this PR was deliberately organised into — policy and gates,
+then the console, then the audit trail, then the environment findings — does not
+survive onto `main`: `main` has one commit, and the seven live on the head branch.
+
+Two things follow for whoever maintains this floor. If provenance across a PR matters
+(here it does, because `docs/RECOVERY.adoc` is a provenance ledger), then either
+commits must be signed by their author — which an agent sandbox with no signing key
+cannot do; `git config` here has no GPG or SSH signing key, and the `Signed-off-by`
+trailer in each commit is a DCO statement, not a signature — or `EstateBranching`
+should allow `merge`. And any estate document that recommends "rebase to keep history
+linear" while `required_signatures` is active is recommending a method that will fail
+for every contributor without a signing key configured.
