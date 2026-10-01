@@ -161,7 +161,7 @@ end
 
 Walk, detect and classify one repository directory.
 """
-function assess(root::AbstractString; policy::Union{Policy.Policy, Nothing} = nothing,
+function assess(root::AbstractString; policy::Union{Policy.Config, Nothing} = nothing,
                 max_files::Union{Integer, Nothing} = nothing)
     pol = policy === nothing ? Policy.load(root) : policy
     cap = max_files === nothing ? pol.max_files : Int(max_files)
@@ -203,7 +203,7 @@ truncated or partially unreadable scan fails too, because "no findings" from an
 incomplete scan is not a pass — the estate's own `required_status_checks: []`
 lesson, applied in the other direction.
 """
-function gate(v::Verdict, policy::Policy.Policy = Policy.Policy())
+function gate(v::Verdict, policy::Policy.Config = Policy.Config())
     reasons = String[]
     hard = policy.nix_severity == "error"
     banned = banned_present_excluding(v.languages, Policy.exemptions(policy); hard_only = !hard)

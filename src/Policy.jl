@@ -19,7 +19,7 @@ import TOML
 
 const ROLES = ("core", "community-adapter", "tool", "research", "deprecated")
 
-Base.@kwdef struct Policy
+Base.@kwdef struct Config
     role::String = "core"
     extra_allowed::Vector{String} = String[]
     required_provers::Vector{String} = ["gnatprove"]
@@ -63,7 +63,7 @@ function parse_bool(x, default::Bool)
 end
 
 """
-    load(root::AbstractString; path = nothing) -> Policy
+    load(root::AbstractString; path = nothing) -> Config
 
 Read `<root>/.language-policy.toml`, or return the strict default with a note
 when it is absent. Never throws: an unreadable or malformed policy becomes a
@@ -72,14 +72,14 @@ note plus defaults, so a broken policy file cannot silently mean "no policy".
 function load(root::AbstractString; path::Union{AbstractString, Nothing} = nothing)
     file = path === nothing ? joinpath(root, ".language-policy.toml") : String(path)
     if !isfile(file)
-        return Policy(declared = false,
+        return Config(declared = false,
                       notes = String["no .language-policy.toml at repo root — strict default policy applied"])
     end
     local raw
     try
         raw = TOML.parse(String(read(file)))
     catch e
-        return Policy(declared = true,
+        return Config(declared = true,
                       notes = String["policy file present but unparseable: " * sprint(showerror, e)])
     end
 
@@ -106,7 +106,7 @@ function load(root::AbstractString; path::Union{AbstractString, Nothing} = nothi
         nix_s = "warn"
     end
 
-    return Policy(
+    return Config(
         role = role_s,
         extra_allowed = extra,
         required_provers = isempty(provers) ? String[] : provers,
@@ -122,14 +122,14 @@ function load(root::AbstractString; path::Union{AbstractString, Nothing} = nothi
 end
 
 """
-    with_strict(pol::Policy) -> Policy
+    with_strict(pol::Config) -> Config
 
 Return `pol` with `strict` forced on. Spelled out field by field because
 `Base.@kwdef` gives no copy-and-override constructor, and a struct literal that
 silently dropped a field would be worse than the verbosity.
 """
-function with_strict(pol::Policy)
-    return Policy(role = pol.role, extra_allowed = pol.extra_allowed,
+function with_strict(pol::Config)
+    return Config(role = pol.role, extra_allowed = pol.extra_allowed,
                   required_provers = pol.required_provers, js_runtime = pol.js_runtime,
                   ffi_method = pol.ffi_method, nix_severity = pol.nix_severity,
                   strict = true, max_files = pol.max_files, exclude = pol.exclude,
@@ -138,7 +138,7 @@ function with_strict(pol::Policy)
 end
 
 """Languages exempted from the ban by this policy (adapters only, upstream rule)."""
-function exemptions(p::Policy)
+function exemptions(p::Config)
     return p.role == "community-adapter" ? p.extra_allowed : String[]
 end
 

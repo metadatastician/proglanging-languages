@@ -22,13 +22,13 @@ module Scan
 
 import ..Languages, ..Detect, ..Classify, ..Policy
 
-Base.@kwdef struct Scan
+Base.@kwdef struct Result
     rows::Vector{Classify.Verdict} = Classify.Verdict[]
     incomplete::Bool = false
     notes::Vector{String} = String[]
 end
 
-Base.length(s::Scan) = length(s.rows)
+Base.length(s::Result) = length(s.rows)
 
 function flatten_notes(rows, notes, src, name, extra)
     for e in extra
@@ -38,7 +38,7 @@ function flatten_notes(rows, notes, src, name, extra)
 end
 
 """
-    local_dir(base::AbstractString; max_files = 200_000) -> Scan
+    local_dir(base::AbstractString; max_files = 200_000) -> Result
 
 Every immediate subdirectory of `base` that contains a `.git` directory.
 """
@@ -47,7 +47,7 @@ function local_dir(base::AbstractString; max_files::Integer = 200_000, require_g
     notes = String[]
     incomplete = false
     if !isdir(base)
-        return Scan(rows, true, String["directory not found: $base"])
+        return Result(rows, true, String["directory not found: $base"])
     end
     found = 0
     for name in sort!(collect(readdir(base)))
@@ -75,7 +75,7 @@ function local_dir(base::AbstractString; max_files::Integer = 200_000, require_g
         incomplete = true
         push!(notes, "no git repositories found directly under $base — this scan covers 0 repos")
     end
-    return Scan(rows, incomplete, notes)
+    return Result(rows, incomplete, notes)
 end
 
 json_get(d, k, default) = (haskey(d, k) && d[k] !== nothing) ? d[k] : default
@@ -95,7 +95,7 @@ end
 
 """
     github_org(org::AbstractString; gh = "gh", limit = 2000, attempts = 3,
-               deep = true, depth = 1, max_files = 200_000) -> Scan
+               deep = true, depth = 1, max_files = 200_000) -> Result
 
 List an org with the `gh` CLI and, when `deep`, shallow-clone each repo to run
 the detectors over its default branch.
@@ -123,7 +123,7 @@ function github_org(org::AbstractString; gh::AbstractString = "gh", limit::Integ
     end
     if parsed === nothing
         push!(notes, "gh repo list $org failed after $attempts attempts ($lasterr) — org $org is NOT covered by this report")
-        return Scan(rows, true, notes)
+        return Result(rows, true, notes)
     end
 
     for item in parsed
@@ -199,7 +199,7 @@ function github_org(org::AbstractString; gh::AbstractString = "gh", limit::Integ
         incomplete = true
         push!(notes, "org $org produced 0 rows — an empty org is not the same as a clean estate")
     end
-    return Scan(rows, incomplete, notes)
+    return Result(rows, incomplete, notes)
 end
 
 istrue(x) = x === true || (x isa AbstractString && lowercase(x) in ("true", "1", "yes"))

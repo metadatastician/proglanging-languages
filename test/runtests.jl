@@ -46,31 +46,31 @@ end
 @testset "gate verdict differs from triage class, on purpose" begin
     nix_only = Classify.Verdict(languages = ["Nix", "Julia"], classification = :MIGRATE,
                                 warnings = ["NIX_PRESENT"], declared_policy = true)
-    ok_loose, why_loose = Classify.gate(nix_only, Policy.Policy(nix_severity = "warn", declared = true))
+    ok_loose, why_loose = Classify.gate(nix_only, Policy.Config(nix_severity = "warn", declared = true))
     @test ok_loose
     @test isempty(why_loose)
 
-    ok_strict, why_strict = Classify.gate(nix_only, Policy.Policy(nix_severity = "error", declared = true))
+    ok_strict, why_strict = Classify.gate(nix_only, Policy.Config(nix_severity = "error", declared = true))
     @test !ok_strict
     @test occursin("Nix", join(why_strict, " "))
 
     warn_only = Classify.Verdict(languages = ["Julia"], classification = :CLEAN,
                                  warnings = ["VITE_DEBATE"], declared_policy = true)
-    @test Classify.gate(warn_only, Policy.Policy(declared = true))[1]
-    @test !Classify.gate(warn_only, Policy.Policy(strict = true, declared = true))[1]
+    @test Classify.gate(warn_only, Policy.Config(declared = true))[1]
+    @test !Classify.gate(warn_only, Policy.Config(strict = true, declared = true))[1]
 
     trunc = Classify.Verdict(languages = ["Julia"], classification = :DONE,
                              truncated = true, declared_policy = true)
-    ok_trunc, why_trunc = Classify.gate(trunc, Policy.Policy(declared = true))
+    ok_trunc, why_trunc = Classify.gate(trunc, Policy.Config(declared = true))
     @test !ok_trunc
     @test occursin("truncated", join(why_trunc, " "))
 
     failed_scan = Classify.Verdict(languages = ["Julia"], classification = :SCAN_FAILED,
                                    declared_policy = true)
-    @test !Classify.gate(failed_scan, Policy.Policy(declared = true))[1]
+    @test !Classify.gate(failed_scan, Policy.Config(declared = true))[1]
 
     undeclared = Classify.Verdict(languages = ["Julia"], classification = :DONE, declared_policy = false)
-    ok_und, why_und = Classify.gate(undeclared, Policy.Policy(declared = false))
+    ok_und, why_und = Classify.gate(undeclared, Policy.Config(declared = false))
     @test !ok_und
     @test occursin("no .language-policy.toml", join(why_und, " "))
 end
@@ -152,9 +152,9 @@ end
         rm(joinpath(FIX, "broken_policy_repo"); recursive = true, force = true)
     end
 
-    u = Policy.Policy(role = "nonsense")
+    u = Policy.Config(role = "nonsense")
     @test u.strict == false
-    s = Policy.with_strict(Policy.Policy(nix_severity = "warn", max_files = 42))
+    s = Policy.with_strict(Policy.Config(nix_severity = "warn", max_files = 42))
     @test s.strict && s.nix_severity == "warn" && s.max_files == 42
 end
 
@@ -227,7 +227,7 @@ end
 end
 
 @testset "github rows are built from gh output without touching the network" begin
-    s = Scan.Scan(rows = Classify.Verdict[Classify.Verdict(name = "x", classification = :SCAN_FAILED)],
+    s = Scan.Result(rows = Classify.Verdict[Classify.Verdict(name = "x", classification = :SCAN_FAILED)],
                   incomplete = true, notes = String["gh failed"])
     @test length(s) == 1
     @test s.incomplete
@@ -274,10 +274,22 @@ end
     @test occursin("julia", ProglangingLanguages.runtime())
     r = ProglangingLanguages.analyze_directory(joinpath(FIX, "kill_repo"))
     @test r.verdict.classification === :KILL
-    sweep = ProglangingLanguages.analyze(joinpath(FIX, "clean_repo"))
-    @test sweep isa ProglangingLanguages.Sweep
-    @test length(sweep.rows) == 1
-    @test occursin("PROGLANGING SCAN COMPLETE", ProglangingLanguages.summary(sweep.rows))
+    # analyze discovers Git repositories under a parent directory.
+    empty_sweep = ProglangingLanguages.analyze(joinpath(FIX, "clean_repo"))
+    @test isempty(empty_sweep.rows)
+    @test empty_sweep.incomplete
+    mktempdir() do base
+        repo = joinpath(base, "clean_repo")
+        cp(joinpath(FIX, "clean_repo"), repo)
+        run(`git init --quiet $repo`)
+        sweep = ProglangingLanguages.analyze(base)
+        @test sweep isa ProglangingLanguages.Sweep
+        @test !sweep.incomplete
+        @test length(sweep.rows) == 1
+        @test only(sweep.rows).name == "clean_repo"
+        @test only(sweep.rows).passed
+        @test occursin("PROGLANGING SCAN COMPLETE", ProglangingLanguages.summary(sweep.rows))
+    end
 end
 
 end # module
