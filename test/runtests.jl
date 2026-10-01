@@ -281,7 +281,7 @@ end
     mktempdir() do base
         repo = joinpath(base, "clean_repo")
         cp(joinpath(FIX, "clean_repo"), repo)
-        run(`git init --quiet $repo`)
+        mkdir(joinpath(repo, ".git"))
         sweep = ProglangingLanguages.analyze(base)
         @test sweep isa ProglangingLanguages.Sweep
         @test !sweep.incomplete
