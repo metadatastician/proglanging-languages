@@ -13,8 +13,7 @@ workflows:
     '.github/workflows/ci.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32'
-    '.github/workflows/secret-scanner.yml':
-        - 'hyperpolymath/standards@bd0df9ead7faf0cdfe0e13e7966d91e28d0101d4'
+    '.github/workflows/secret-scanner.yml': []
 dependencies:
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1':
         ref: 'v7.0.1'
