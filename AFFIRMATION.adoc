@@ -1,0 +1,433 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= AFFIRMATION — proglanging-languages, as of 2026-10-07
+Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+:toc: macro
+:toclevels: 2
+:icons: font
+:doctype: article
+:std-docs: https://github.com/hyperpolymath/standards/blob/main/docs
+
+_What we affirm was true and checkable at one stamped commit, and nothing
+more._
+
+[NOTE]
+====
+An *affirmation* is a solemn declaration of the truth of a statement, made by
+someone who declines to swear an oath. This file is the third of the README /
+EXPLAINME / AFFIRMATION trio and follows
+link:{std-docs}/AFFIRMATION-STANDARD.adoc[the affirmation standard],
+profile A (evidential).
+
+[cols="1,3,2",options="header"]
+|===
+| File | Answers | Tense
+| `README.adoc` | Where is this going, and why? | future / aspirational
+| `EXPLAINME.adoc` | How is it built, and what is the evidence? | mechanism
+| `AFFIRMATION.adoc` | What was true and checkable at a stamped moment? |
+  a frozen instant, falsifiable
+|===
+
+This file is optional. Delete it rather than carry one that has not been
+re-verified: a stale affirmation is worse than none.
+====
+
+toc::[]
+
+== What this is, and how it works
+
+*What the project is.* A diagnostics console for a polyglot estate, written in
+Julia with standard-library dependencies only. Given a repository, it reports
+which languages the tree contains (by file extension), which of them the
+estate's language policy bans, and which of eight architectural anti-patterns
+it shows, with the files behind each anti-pattern. It then classifies the
+repository (`DONE`, `CLEAN`, `MIGRATE`, `KILL`, ...) and gates it against the
+repository's own `.language-policy.toml`. It also times its own walk, detect
+and assess phases (`bench`) and can fail on a regression against a baseline
+CSV. It is a port of the shell toolkit in `metadatastician/cadastra`
+(`tools/estate-migration-toolkit/`).
+
+*How this file stays trustworthy.*
+
+. *Ground truth, not memory.* Every claim below comes from a command run in the
+  session that wrote this file. Where a status document disagreed with a live
+  run, the live run won and the document is named as stale in <<outstanding>>.
+. *A frozen anchor.* <<verifiable-anchor>> names the exact commit, the branch,
+  the UTC time, the working-tree delta and the toolchains. Move the SHA and
+  this file is a draft.
+. *A real signature.* The file means something only once the owner lands it in
+  a signed commit. Until then it is a draft.
+
+== The epistemic contract
+
+This file records our *best belief* at the timestamp below. It is not a
+guarantee of correctness. The only guarantee is *no intentional overclaim*.
+
+You may conclude:
+
+* Each claim in <<solid>> was produced by running the named command against
+  the anchored tree in this session, and the quoted output is what it printed.
+* Where a run contradicted the README, CHANGELOG, `docs/` or repo metadata, the
+  contradiction is listed here, not smoothed over.
+
+You may *not* conclude:
+
+* That anything is true at a later commit.
+* That anything unlisted passes. *Silence is not a claim.*
+* That CI is green. This session could not read the run list for this
+  repository (see <<outstanding>>), so the file makes no CI claim either way.
+
+*Standing invitation to refute.* Bring a counter-example, a failing run or a
+contradicting source.
+
+[#verifiable-anchor]
+== Verifiable anchor
+
+[cols="1,3",options="header"]
+|===
+| Field | Value
+
+| Repo
+| `metadatastician/proglanging-languages`
+
+| Branch
+| `main` (measured on a local branch `docs/affirmation-2026-10-07` created at
+  the same commit; the only difference is this untracked file)
+
+| Commit (HEAD)
+| `9b43eb48b409b280ee67cf3d585fdcf93ab0d716`
+
+| Permalink
+| https://github.com/metadatastician/proglanging-languages/tree/9b43eb48b409b280ee67cf3d585fdcf93ab0d716
+
+| Verified (UTC)
+| `2026-10-07T11:12:34Z` (last run; window `10:47:00Z`–`11:12:34Z`)
+
+| Working-tree delta at verification
+| Tracked tree clean. Untracked, and gitignored: `Manifest.toml` (written by
+  `Pkg.test()`; lists only stdlib packages) and `.scratch/` (bench and scan
+  CSVs written by the runs below). Neither changes any result: both are
+  outputs of the runs, not inputs to them.
+
+| Toolchain
+| Julia `1.12.6` and `1.10.10` (local installs under the developer `tools/`
+  tree), `git 2.47.3`, `/bin/sh` = `dash`, `python3 3.14.6` and
+  `ruby 4.0.6` (used only by `tools/selfcheck.sh`), `gh 2.96.0` (one API
+  read), Linux x86_64 (WSL2), Julia running with 1 thread.
+
+| Affirmed by
+| Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+|===
+
+[IMPORTANT]
+====
+*Never anchor to a tag.* Tags move, and a moved tag silently invalidates every
+claim in this file.
+
+If you are reading this at a later commit, the claims may have drifted. Re-run
+<<reproduce>> and write a fresh affirmation; do not trust a stale one.
+====
+
+== Companion documents and repo metadata (cross-check)
+
+Read these against this file, including the ones that contradict it.
+
+* `README.adoc`: the claims this file is measured against. It *contradicts*
+  this file in several places; see <<outstanding>>.
+* `docs/FINDINGS.adoc`: defects F1–F12, measured in the tooling this port
+  replaces. §F9 (Actions cannot start) is not re-tested here; see
+  <<outstanding>>.
+* `docs/RECOVERY.adoc` and `CHANGELOG.md`: both repeat the "151 assertions"
+  figure that this session refutes.
+* `0-AI-MANIFEST.a2ml`: legacy metadata. A2ML is retired estate-wide in favour
+  of a `<repo>_chora.deed`, and this repo has no deed yet. Its
+  `unverified-locally` line ("Pkg.test() has never run") is refuted by this
+  session.
+* `README.md`: a pointer to `README.adoc`. The affirmation standard's naming
+  table records `README.md` as banned.
+* `EXPLAINME.adoc`: absent, though the affirmation standard calls it
+  mandatory. `docs/ARCHITECTURE.adoc` exists; it was not read for this file.
+* GitHub description: "Julia, standard-library-only diagnostics console that
+  scans polyglot repositories for language-policy violations and
+  architectural anti-patterns, with evidence-backed classifications and scan
+  timing." Each phrase is checked in <<solid>> and qualified in <<nuance>>.
+
+== The honest state (one breath)
+
+The Julia package builds and its whole test suite passes on Julia 1.10.10 and
+1.12.6. The console's gate, scan, report, bench and doctor commands run, and
+gate, scan and bench can each say no. The project's own offline verifier is
+red, though, on a stale `actions.lock` entry. The README's package example
+does not work as written, and the published assertion count is wrong.
+
+[#solid]
+=== What is solid (and how we checked)
+
+[cols="3,1,4",options="header"]
+|===
+| Claim | Status | Evidence (command, and what it printed)
+
+| Test suite passes on Julia 1.12.6
+| affirmed
+| `julia --project=. -e 'using Pkg; Pkg.test()'`: rc=0, 16 testsets,
+  *140* passes, 0 fail, 0 error, 0 broken; ends
+  `ProglangingLanguages tests passed`
+
+| Test suite passes on Julia 1.10.10
+| affirmed
+| same command with the 1.10.10 binary: rc=0, the same 16 testsets and
+  *140* passes
+
+| The 140 passes are the whole suite
+| affirmed
+| `grep -cE '@test\b|@test_throws|@test_broken|@test_skip'
+  test/runtests.jl`: `140`
+
+| Julia dependencies are stdlib only
+| affirmed
+| `Project.toml` `[deps]` is `TOML` only, `[extras]` is `Test` only; the
+  generated `Manifest.toml` lists only stdlib packages (`Dates`, `Printf`,
+  `TOML`, `Unicode`); the test environment adds stdlib `Test` and its deps
+
+| The console passes its own gate
+| affirmed
+| `julia --project=. bin/proglanging.jl gate .`: rc=0, role `tool`,
+  `classification: DONE`, `✓ gate passed`; same with `--strict`
+
+| The gate can fail (planted positives)
+| affirmed
+| `gate test/fixtures/kill_repo`: rc=1, `KILL`, `banned languages
+  detected: Python`; `deno_repo`: rc=1, `DENO_NOT_BUN` with
+  `deno.json` as evidence; `rust_unverified`: rc=1, `UNVERIFIED_RUST` and
+  `DIRECT_FFI_NO_HEXADECA`, each naming a file; `clean_repo`: rc=0
+
+| `--strict` promotes warnings
+| affirmed
+| `gate test/fixtures/nix_repo --strict` adds the reason `anti-pattern
+  (warning, strict mode): NIX_PRESENT`, which the non-strict run lacks
+
+| `doctor` runs
+| affirmed
+| `bin/proglanging.jl doctor`: rc=0, `proglanging 0.1.0`, `banned
+  languages: 25 · allowed: 20 · warn-only: 3`, `detectors: 8`, nine classes
+
+| An empty scan is not a pass
+| affirmed
+| `scan --local test/fixtures --csv ...`: rc=3, `no git repositories found
+  ... covers 0 repos`, `✗ scan INCOMPLETE`; with `--allow-incomplete`: rc=0
+
+| Scan works on real repos
+| affirmed
+| `scan --local meta-repos/KNOW/julia` (2 git repos): rc=0, 16.9 s wall,
+  `ZenodoDeposits.jl` DONE, `ZeroInflatedCounts.jl` MIGRATE; `report
+  .scratch/kj.csv` re-counts that CSV without re-scanning: `rows: 2`,
+  `DONE 1`, `MIGRATE 1`, rc=0
+
+| Self-timing (`bench`) exists, and a baseline can fail
+| affirmed
+| `bench . --reps 3 --csv ...`: rc=0, median and MAD for walk, detect and
+  assess. With a planted 1 ns baseline: rc=1, `✗ benchmark regression
+  beyond tolerance`. With a real baseline from an earlier run: rc=0
+
+| Container floor holds, and can fail
+| affirmed
+| `sh tools/check-containerfile.sh`: rc=0, `container floor: clean`. On a
+  copy with the `@sha256` digest stripped: rc=1, `FAIL: a FROM line is
+  not digest-pinned`
+
+| README roadmap and the org-wide reusable gate
+| aspiration
+| not checked; do not read as affirmed
+|===
+
+[#nuance]
+=== The honest nuance you must not lose
+
+* *"Evidence-backed classifications" holds for anti-patterns only.* Every
+  anti-pattern finding names its files. A banned-*language* verdict does not:
+  `analyze_directory` on `ZeroInflatedCounts.jl` returned `MIGRATE` with
+  reason `banned languages detected: JavaScript` and an *empty* evidence
+  dictionary, although the tree holds `scripts/check-action-pinning.js`.
+  The `KILL` gate on `kill_repo` likewise prints no evidence block.
+* *Language detection is by path, not content.* `src/Languages.jl` maps a
+  file by extension (`EXT_MAP`), then by basename. `tools/selfcheck.sh` embeds
+  Python heredocs, yet the self-gate's language list shows `Shell` and no
+  `Python`, and `selfcheck.sh` prints `ok: no banned-language files outside
+  test/fixtures`. The tool cannot see a language hidden inside another
+  language's file.
+* *"Standard-library-only" describes the Julia deps, not the runtime.* Local
+  scans need `git` (non-git directories are skipped, and the HEAD date and
+  commit count come from `git`). `scan --github` shells out to `gh` and uses
+  the network (per `src/Scan.jl`; not run here). `tools/selfcheck.sh`
+  needs `python3` and `ruby`, and Python is banned by the estate policy that
+  this tool enforces.
+* *`primary_language` is the first language the walk met, not the dominant
+  one* (`src/Classify.jl` line 175: `files.langs[1]`). The self-scan reports
+  `TOML` for this Julia repo, and both sample repos report `YAML`.
+* *Without a policy file, every gate fails.* Every gate run on a repo with
+  no `.language-policy.toml` (six runs) listed this failing reason:
+  `no .language-policy.toml — defaults applied`. That is the documented
+  intent, but a red gate on an unconfigured repo is not, by itself, a
+  finding about its code.
+* *"Scan timing" means the separate `bench` command.* No `scan` run above
+  printed a timing. `bench` times walk, detect and assess over one
+  repository; it does not time an estate scan.
+* *Bench numbers are noisy at `--reps 3`.* The walk median was 7.30 ms, then
+  3.37 ms, then 1.25 ms in three runs on the same machine within 11 minutes.
+  A 10% regression tolerance at that sample size can flap.
+* *The 1.11 CI leg was not run here.* CI's matrix is `1.10` and `1.11`; this
+  session ran 1.10.10 and 1.12.6.
+* The console prints the banner `PROGLANGING SCAN COMPLETE` even on a scan it
+  then declares `INCOMPLETE` (rc=3). The exit code and the closing line are
+  right; the banner is not. `gate .` prints an empty `repo:` field, because
+  the basename of `.` is empty.
+
+=== Known-incomplete but honestly fenced
+
+* *Partial scans fail loudly.* Fenced by: exit code 3 and the line
+  `✗ scan INCOMPLETE — do not treat this report as a clean result`, unless the
+  caller opts in with `--allow-incomplete` (observed above).
+* *Truncated walks fail the gate.* Fenced by: the testset `truncation is
+  reported, never hidden` (4 passes). This session did not run a truncated
+  gate from the console.
+* *Missing tools in the offline verifier.* Fenced by: `tools/selfcheck.sh`
+  prints `SKIP` with a reason for any absent tool, so a partial pass is
+  visible. Nothing was skipped in this run (`8 ok · 1 fail · 0 skip`).
+
+[#outstanding]
+=== Outstanding / weak / refuted (no spin)
+
+* *The offline verifier is red at the anchor.* `./tools/selfcheck.sh`: rc=1,
+  `FAIL: actions.lock is out of sync with the workflows`, `used but not
+  locked: {'hyperpolymath/standards@74d2f66f575246cf6e313ae7775f44df6e097ff2'}`.
+  `.github/workflows/secret-scanner.yml` pins `74d2f66…`, and
+  `.github/workflows/actions.lock` still records `bd0df9ea…`.
+* *CI state at the anchor is unmeasured.* `gh run list` was refused with
+  `HTTP 403: API rate limit exceeded` at `2026-10-07T11:04:19Z`, and per
+  estate rule the session made no further GitHub calls. No green and no red
+  is claimed.
+* *Actions is enabled as of 2026-10-07; FINDINGS §F9 is not re-tested.*
+  `gh api repos/metadatastician/proglanging-languages/actions/permissions`,
+  read with the owner's user token, returned
+  `{"enabled":true,"allowed_actions":"selected","sha_pinning_required":true}`.
+  §F9's 403 was read with a different credential (the authoring sandbox's
+  integration token), so this is not a contradiction of it. Whether Actions
+  was disabled when §F9 was measured is unknown. Whether workflows now start,
+  and whether the `selected` allow-list explains the earlier startup
+  failures, was not measured.
+* *Stale metadata.* `0-AI-MANIFEST.a2ml` is a retired format with no
+  `<repo>_chora.deed` successor yet. `README.md` and `EXPLAINME.adoc` do not
+  match the affirmation standard's companion rules (EXPLAINME mandatory,
+  `README.md` banned). None of this was changed here.
+* *Refuted this session:*
+** "151 assertions" (`README.adoc` Development block, `CHANGELOG.md`,
+   `docs/RECOVERY.adoc`): refuted. The suite has 140 `@test` macros, and both
+   runs report 140 passes.
+** "The test suite has not been executed yet" (`README.adoc` CAUTION) and
+   "Pkg.test() has never run" (`0-AI-MANIFEST.a2ml`): refuted. It ran green
+   on 1.10.10 and 1.12.6 in this session.
+** The README's package example (`using ProglangingLanguages; sweep =
+   analyze(...)`): refuted as written. `analyze` and `analyze_directory` are
+   not exported (`export` lists only the submodules), so the line raises
+   `UndefVarError: analyze not defined in Main`. When the calls are
+   qualified, `summary(sweep.rows)` resolves to `Base.summary` and prints
+   `2-element Vector{ProglangingLanguages.Classify.Verdict}`, not the triage
+   table. That failure is silent.
+** README "Console" block: shows `4 threads`; this machine printed
+   `1 threads`. README already labels that block environment-specific, so
+   this is recorded, not refuted.
+
+[IMPORTANT]
+====
+Never delete a refuted claim. Mark it refuted and say what refuted it.
+====
+
+[#reproduce]
+== Reproduce it yourself
+
+[source,bash]
+----
+git clone https://github.com/metadatastician/proglanging-languages
+cd proglanging-languages
+git checkout 9b43eb48b409b280ee67cf3d585fdcf93ab0d716
+
+julia --project=. -e 'using Pkg; Pkg.test()'
+# expect: 16 testsets, 140 passes, "ProglangingLanguages tests passed"
+
+julia --project=. bin/proglanging.jl gate .
+# expect: classification: DONE, "✓ gate passed", rc=0
+julia --project=. bin/proglanging.jl gate test/fixtures/kill_repo
+# expect: KILL, "✗ gate FAILED", rc=1
+julia --project=. bin/proglanging.jl doctor
+# expect: banned languages: 25 · allowed: 20 · warn-only: 3, rc=0
+
+mkdir -p .scratch
+julia --project=. bin/proglanging.jl scan --local test/fixtures \
+  --csv .scratch/fix.csv
+# expect: "✗ scan INCOMPLETE", rc=3
+julia --project=. bin/proglanging.jl bench . --reps 3 \
+  --csv .scratch/bench.csv
+# expect: walk/detect/assess medians, rc=0
+
+sh tools/check-containerfile.sh
+# expect: "container floor: clean", rc=0
+./tools/selfcheck.sh
+# expect at this anchor, with python3 and ruby on PATH:
+#   "8 ok · 1 fail · 0 skip", rc=1
+#   (actions.lock out of sync with secret-scanner.yml)
+
+julia --project=. -e 'using ProglangingLanguages; analyze(".")'
+# expect at this anchor: UndefVarError (analyze is not exported)
+----
+
+== One-line characterisation (quote this)
+
+[quote]
+____
+At `9b43eb48`, proglanging-languages is a working, stdlib-only Julia console
+whose 140-assertion suite passes on 1.10 and 1.12 and whose every gate can say
+no. Its offline verifier is red on a stale lock entry, its README overstates
+the test count and ships a broken package example, and "evidence-backed" is
+true for anti-patterns but not for language verdicts.
+____
+
+== Joint attestation
+
+We, the undersigned, assert that *to the best of our joint belief at the
+timestamp above, every claim in this file is true and was checked as
+described*. There is no intentional overclaim, and the open gaps are stated
+rather than hidden.
+
+* *Engineering party (AI):* `claude-opus-5-5` (Claude Code agent session) ran
+  every check recorded here between `2026-10-07T10:47:00Z` and
+  `2026-10-07T11:12:34Z`, against commit
+  `9b43eb48b409b280ee67cf3d585fdcf93ab0d716`. It stands behind the wording
+  above as a faithful report of those runs. It did not commit, sign or push
+  this file.
+* *Owner / maintainer:* Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk> signs
+  by committing this file with `-S`. The git commit signature over this
+  content, with the anchor SHA above as the commit's parent, is the
+  cryptographic form of this affirmation.
+
+[source,bash]
+----
+git add AFFIRMATION.adoc
+git commit -S -s \
+  -m "docs: affirm state at 9b43eb48b409b280ee67cf3d585fdcf93ab0d716"
+git log --show-signature -1
+----
+
+[WARNING]
+====
+Do not use `--no-verify`. An affirmation landed past its own repo's gates is
+self-refuting.
+
+The anchor test is "anchor SHA = parent of the signing commit". It holds if
+the commit is made on a branch at `9b43eb48…` and merged so that the commit
+survives. A squash merge after `main` has moved breaks it, and the file then
+reads as a draft until it is re-run.
+====
+
+_Verify with `git log --show-signature` that the anchor SHA above matches the
+parent of the commit that introduced this affirmation. If they do not match,
+this file is a *draft* and must be read as one._
