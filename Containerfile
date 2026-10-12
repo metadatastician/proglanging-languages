@@ -20,7 +20,7 @@ ARG JULIA_VERSION=1.11
 
 # The digest is written on the FROM line, not behind an ARG: `tools/check-containerfile.sh`
 # inspects FROM lines, and a pin it cannot see is not a control.
-FROM cgr.dev/chainguard/wolfi-base@sha256:9c2092b053779e14c82fb50f77b37bcc38b7d2c83972352d5813280f9d035b03 AS runtime
+FROM cgr.dev/chainguard/wolfi-base@sha256:256c88bb066424045021090932d50be93c8e3f2ce3586707702a401b146f3e43 AS runtime
 
 LABEL org.opencontainers.image.title="proglanging-languages" \
       org.opencontainers.image.description="Estate language-policy analysis, evaluation and benchmarking console" \
